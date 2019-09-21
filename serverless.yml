@@ -1,0 +1,51 @@
+service: whatworthIt
+
+custom:
+  bucket-name: whatworth-it
+
+provider:
+  name: aws
+  runtime: nodejs10.x
+  stage: dev
+  region: ap-southeast-2
+
+iamRoleStatements:
+  - Effect: Allow
+    Action:
+      - dynamodb:*
+    Resource: arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/*
+  - Effect: Allow
+    Action:
+      - s3:PutObject
+    Resource: arn:aws:s3:::${self:custom.bucket-name}
+  - Effect: Allow
+    Action:
+      - s3:ListBucket
+    Resource: arn:aws:s3:::${self:custom.bucket-name}
+
+functions:
+  index:
+    handler: handler.handler
+    environment:
+      BUCKET_NAME: ${self:custom.bucket-name}
+    events:
+      - http: 
+          path: /
+          method: ANY
+          cors: true
+      - http: 
+          path: /{proxy+}
+          method: ANY
+          cors: true
+
+resources:
+  Resources:
+    bocUploadBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.bucket-name}
+        AccessControl: PublicReadWrite
+
+plugins:
+  - serverless-offline
+  - serverless-s3-local
